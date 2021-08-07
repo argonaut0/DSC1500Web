@@ -1,6 +1,6 @@
-export type Request = [Uint8Array, Deno.Addr];
+export type PC1500Request = [Uint8Array, Deno.Addr];
 
-export type RequestCallback = (req: Request) => void;
+export type RequestCallback = (req: PC1500Request) => void;
 
 export interface IPC1500Socket {
     /**
@@ -53,12 +53,14 @@ export default class PC1500Socket implements IPC1500Socket {
     }
 }
 
-const dec = new TextDecoder();
-function logReqMsg(req: [Uint8Array, Deno.Addr]) {
-    console.log(dec.decode(req[0]));
-}
+if (import.meta.main) {
+    const dec = new TextDecoder();
+    const logReqMsg = (req: [Uint8Array, Deno.Addr]) => {
+        console.log(dec.decode(req[0]));
+    }
 
-const pcSock = new PC1500Socket("192.168.1.1", 1111, "192.168.1.4", 1111);
-pcSock.register(logReqMsg);
-pcSock.listen();
-console.log("after listen()");
+    const pcSock = new PC1500Socket("192.168.1.1", 1111, "192.168.1.4", 1111);
+    pcSock.register(logReqMsg);
+    pcSock.listen();
+    console.log("after listen()");
+}

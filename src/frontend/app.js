@@ -19,7 +19,7 @@ class App extends React.Component {
   }
 
   componentDidMount() {
-    this.ws = new WebSocket("ws://192.168.1.1:8081/websocket");
+    this.ws = new WebSocket("ws://192.168.1.1:8080/websocket");
     this.ws.onmessage = (event) => {
         const data = event.data.slice(0,12);
         const ns = {
