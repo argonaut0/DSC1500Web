@@ -2,23 +2,10 @@ export type PC1500Request = [Uint8Array, Deno.Addr];
 
 export type RequestCallback = (req: PC1500Request) => void;
 
-export interface IPC1500Socket {
-  /**
-     * Starts listening for and processing requests.
-     */
-  listen(): Promise<void>;
-
-  /**
-     * Register a function to be called when an request arrives.
-     * @param fn Callback Function.
-     */
-  onRequest(fn: RequestCallback): void;
-}
-
-export default class PC1500Socket implements IPC1500Socket {
+export default class PC1500Socket {
   private local: Deno.NetAddr & { transport: "udp" };
   private remote: Deno.NetAddr & { transport: "udp" };
-  private requestCallbacks: RequestCallback[] = [];
+  private requestCallbacks: Map<number, RequestCallback> = new Map();
   private enc = new TextEncoder();
   private dec = new TextDecoder();
   private udpSocket!: Deno.DatagramConn;
@@ -56,8 +43,8 @@ export default class PC1500Socket implements IPC1500Socket {
       this.udpSocket = Deno.listenDatagram(this.local);
       this.udpSocket.send(this.enc.encode("U"), this.remote);
       for await (const req of this.udpSocket) {
-        for (const fn of this.requestCallbacks) {
-          fn(req);
+        for (const entry of this.requestCallbacks) {
+          entry[1](req);
         }
       }
     }
@@ -65,9 +52,19 @@ export default class PC1500Socket implements IPC1500Socket {
   /**
      * Registers a callback to handle incoming messages.
      * @param fn callback
+     * @param id unique id
      */
-  onRequest(fn: RequestCallback): void {
-    this.requestCallbacks.push(fn);
+  onRequest(fn: RequestCallback, id: number): void {
+    if (this.requestCallbacks.has(id)) {
+      throw new Error(`callback of id ${id} already exists`);
+    }
+    this.requestCallbacks.set(id, fn);
+  }
+
+  unregister(id: number): void {
+    if (this.requestCallbacks.has(id)) {
+      this.requestCallbacks.delete(id);
+    }
   }
 }
 
@@ -78,17 +75,7 @@ if (import.meta.main) {
   };
 
   const pcSock = new PC1500Socket("192.168.1.1", 1111, "192.168.1.4", 1111);
-  pcSock.onRequest(logReqMsg);
+  pcSock.onRequest(logReqMsg, 1);
   pcSock.listen();
   console.log("after listen()");
 }
-
-/**
- * todo: implement unsubscribe via register with Deno.Conn.rid
- * rid should be unique per program execution
- * I have no idea what happens if it overflows.. can it overflow?
- * it is a js number (int), so max safe int is 9 quadrillion.
- * the server would need to handle >28 million
- * new connections per second to overflow within 10 years of non-stop operation.
- *
- */

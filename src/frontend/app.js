@@ -44,21 +44,24 @@ class App extends React.Component {
   }
 
   render() {
-    return Object.entries(this.state).map(function (kv) {
+    return e(
+      "div",
+      {className: "status_container"},
+      Object.entries(this.state).map(function (kv) {
       if (kv[1]) {
         return e(
           "h1",
-          null,
+          {className: "lighton"},
           `${kv[0]}`,
         );
       } else {
         return e(
-          "h3",
-          null,
+          "h1",
+          {className: "lightoff"},
           `${kv[0]}`,
         );
       }
-    });
+    }));
     /*
     e(
         'h1',
